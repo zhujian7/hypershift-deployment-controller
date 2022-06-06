@@ -44,7 +44,10 @@ import (
 
 var resLog = ctrl.Log.WithName("resource-render")
 
-func getReleaseImagePullSpec() string {
+func getReleaseImagePullSpec(annotations map[string]string) string {
+	if releaseImage, ok := annotations[constant.AnnoReleaseImage]; ok {
+		return releaseImage
+	}
 
 	defaultVersion, err := version.LookupDefaultOCPVersion()
 	if err != nil {
@@ -249,7 +252,7 @@ func scaffoldHostedClusterSpec(hyd *hypdeployment.HypershiftDeployment) {
 				// Defaults for all platforms
 				PullSecret: corev1.LocalObjectReference{Name: hyd.Name + "-pull-secret"},
 				Release: hyp.Release{
-					Image: getReleaseImagePullSpec(), //.DownloadURL,
+					Image: getReleaseImagePullSpec(hyd.Annotations), //.DownloadURL,
 				},
 				Services: []hyp.ServicePublishingStrategyMapping{},
 			}
@@ -362,6 +365,10 @@ func ScaffoldNodePoolSpec(hyd *hypdeployment.HypershiftDeployment, infraOut *aws
 			releaseImage = hyd.Spec.HostedClusterSpec.Release.Image
 		}
 
+		if releaseImage == "" {
+			releaseImage = getReleaseImagePullSpec(hyd.Annotations)
+		}
+
 		if infraOut == nil {
 			hyd.Spec.NodePools = append(hyd.Spec.NodePools, getNodePoolSpec(hyd.Name, hyd.Name, releaseImage))
 		} else {
@@ -389,10 +396,6 @@ func ScaffoldNodePoolSpec(hyd *hypdeployment.HypershiftDeployment, infraOut *aws
 
 func getNodePoolSpec(name, clusterName, releaseImage string) *hypdeployment.HypershiftNodePools {
 	replicas := int32(2)
-
-	if releaseImage == "" {
-		releaseImage = getReleaseImagePullSpec()
-	}
 
 	return &hypdeployment.HypershiftNodePools{
 		Name: name,

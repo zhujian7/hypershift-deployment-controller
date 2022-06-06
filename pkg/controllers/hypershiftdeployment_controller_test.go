@@ -154,7 +154,7 @@ func TestScaffoldHostedClusterSpec(t *testing.T) {
 		// Defaults for all platforms
 		PullSecret: corev1.LocalObjectReference{Name: ""},
 		Release: hyp.Release{
-			Image: getReleaseImagePullSpec(), //.DownloadURL,
+			Image: getReleaseImagePullSpec(nil), //.DownloadURL,
 		},
 		Services: []hyp.ServicePublishingStrategyMapping{},
 	}
@@ -163,7 +163,7 @@ func TestScaffoldHostedClusterSpec(t *testing.T) {
 	assert.Equal(t, testHD.Spec.HostedClusterSpec.PullSecret.Name,
 		"test1-pull-secret", "Equal when pull secret name is populated")
 	assert.Equal(t, testHD.Spec.HostedClusterSpec.Release.Image,
-		getReleaseImagePullSpec(),
+		getReleaseImagePullSpec(nil),
 		"The image we update at release time as stable")
 	assert.Equal(t, testHD.Spec.HostedClusterSpec.Networking.ServiceCIDR,
 		"172.31.0.0/16", "default serviceCIDR")
@@ -783,4 +783,13 @@ func TestLocalObjectReferencesForHCandNP(t *testing.T) {
 	nps := getNodePoolsInManifestPayload(payload)
 	assert.Len(t, nps, 1, "nodepool is added in manifestwork from hypershiftdeployment nodePoolRef")
 	assert.Equal(t, nps[0].GetNamespace(), testHD.Spec.HostingNamespace)
+}
+
+func TestGetReleaseImagePullSpec(t *testing.T) {
+	expectedReleaseImage := "quay.io/openshift-release-dev/ocp-release:4.10.16-x86_64"
+	annos := map[string]string{
+		constant.AnnoReleaseImage: expectedReleaseImage,
+	}
+	releaseImage := getReleaseImagePullSpec(annos)
+	assert.Equal(t, expectedReleaseImage, releaseImage, "is equal when annotation release image is set")
 }
